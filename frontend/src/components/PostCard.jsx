@@ -21,8 +21,8 @@ const PostCard = ({ post }) => {
   const [showMenu, setShowMenu] = useState(false);
   const [likeLoading, setLikeLoading] = useState(false);
 
-  const isLiked = post.likes.includes(user._id);
-  const isOwner = post.author._id === user._id;
+  const isLiked = user ? post.likes.includes(user._id) : false;
+  const isOwner = user ? post.author._id === user._id : false;
 
   const handleLike = async () => {
     if (likeLoading) return;
@@ -56,7 +56,7 @@ const PostCard = ({ post }) => {
           className="flex items-center gap-2"
         >
           <img
-            src={post.author.avatar || "https://via.placeholder.com/40"}
+            src={post.author.avatar || "👥"}
             alt="avatar"
             className="w-10 h-10 rounded-full object-cover"
           />

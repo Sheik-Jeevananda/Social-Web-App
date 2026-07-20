@@ -8,18 +8,38 @@ const EditProfileModal = ({ profile, onClose, onUpdate }) => {
     username: profile.username || "",
     bio: profile.bio || "",
   });
+  const [avatarFile, setAvatarFile] = useState(null);
+  const [avatarPreview, setAvatarPreview] = useState(
+    profile.avatar || "https://via.placeholder.com/80",
+  );
   const [loading, setLoading] = useState(false);
 
   const handleChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
+  const handleFileChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setAvatarFile(file);
+    setAvatarPreview(URL.createObjectURL(file));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data } = await API.put("/users/edit", {
-        ...formData,
+      const formPayload = new FormData();
+      formPayload.append("username", formData.username);
+      formPayload.append("bio", formData.bio);
+
+      if (avatarFile) {
+        formPayload.append("avatar", avatarFile);
+      }
+
+      const { data } = await API.put("/users/edit", formPayload, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
       onUpdate(data.user);
@@ -44,12 +64,21 @@ const EditProfileModal = ({ profile, onClose, onUpdate }) => {
           </button>
         </div>
 
-        <div className="flex justify-center mb-5">
+        <div className="flex flex-col items-center mb-5">
           <img
-            src={profile.avatar || "https://via.placeholder.com/80"}
+            src={avatarPreview}
             alt="avatar"
             className="w-20 h-20 rounded-full object-cover border-4 border-blue-100"
           />
+          <label className="mt-3 text-sm font-medium text-blue-500 cursor-pointer">
+            Change avatar
+            <input
+              type="file"
+              accept="image/*"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+          </label>
         </div>
 
         {/* Form */}

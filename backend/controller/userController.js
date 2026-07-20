@@ -1,6 +1,7 @@
 const User = require("../models/User");
 const bcrypt = require("bcrypt");
 const createNotification = require("../utils/createNotification");
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
 
 
 const getUserProfile = async(req,res)=>{
@@ -23,9 +24,16 @@ const editProfile = async (req , res)=>
   try {
       const { username, bio, avatar } = req.body;
       const updateData = {};
+
+      if (req.file) {
+        const result = await uploadToCloudinary(req.file.buffer);
+        updateData.avatar = result.secure_url;
+      } else if (avatar !== undefined) {
+        updateData.avatar = avatar;
+      }
+
       if (username !== undefined) updateData.username = username;
       if (bio !== undefined) updateData.bio = bio;
-      if (avatar !== undefined) updateData.avatar = avatar;
 
       if (username) {
         const existingUser = await User.findOne({

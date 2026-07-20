@@ -8,27 +8,29 @@ const {
   deletePost,
   explorePosts,
 } = require("../controller/postController");
-const authMiddleware = require("../middleware/authMiddleware");
 
-// Explore (must be before /:id)
+const authMiddleware = require("../middleware/authMiddleware");
+const upload = require("../middleware/upload");
+
+// Explore
 router.get("/explore", authMiddleware, explorePosts);
 
-// Feed (must be before /:id)
+// Feed
 router.get("/feed", authMiddleware, getFeed);
 
-// Get user posts (must be before /:id)
+// User posts
 router.get("/user/:id", authMiddleware, getUserPosts);
 
 // Create post
-router.post("/", authMiddleware, createPost);
+router.post("/", authMiddleware, upload.single("image"), createPost);
 
 // Get single post
 router.get("/:id", authMiddleware, getPost);
 
-// Like / Unlike
+// Like
 router.put("/:id/like", authMiddleware, likePost);
 
-// Delete post
+// Delete
 router.delete("/:id", authMiddleware, deletePost);
 
 module.exports = router;

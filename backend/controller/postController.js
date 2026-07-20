@@ -3,10 +3,20 @@ const User = require("../models/User");
 const Comment = require("../models/comment");
 const createNotification = require("../utils/createNotification");
 
-
+const uploadToCloudinary = require("../utils/uploadToCloudinary");
 
 const createPost = async (req, res) => {
   try {
+    let imageUrl = "";
+    let publicId = "";
+
+    if (req.file) {
+      const result = await uploadToCloudinary(req.file.buffer);
+
+      imageUrl = result.secure_url;
+      publicId = result.public_id;
+    }
+    
     const { content } = req.body;
 
     if (!content || !content.trim()) {
@@ -16,6 +26,8 @@ const createPost = async (req, res) => {
     const post = await Post.create({
       author: req.user.id,
       content,
+      image : imageUrl,
+      imagePublicId: publicId,
     });
 
     const populatedPost = await Post.findById(post._id).populate(

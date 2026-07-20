@@ -3,28 +3,33 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
-const register = async(req ,res)=>{
-  try{
-      const {username , email , password} = req.body;
-      const existingUser = await User.findOne({ email });
-      if (existingUser) {
-         return res.status(400).json({ message: "Email already in use" });
+const register = async (req, res) => {
+  try {
+    const { username, email, password } = req.body;
+
+    if (!username || !email || !password) {
+      return res.status(400).json({ message: "username, email and password are required" });
+    }
+
+    // check for existing username or email
+    const existingUser = await User.findOne({ $or: [{ email }, { username }] });
+    if (existingUser) {
+      if (existingUser.email === email) {
+        return res.status(400).json({ message: "Email already in use" });
+      }
+      return res.status(400).json({ message: "Username already taken" });
     }
 
     const hashedPassword = await bcrypt.hash(password, 10);
     const newUser = await User.create({
       username,
       email,
-      password: hashedPassword
+      password: hashedPassword,
     });
 
-    const token = jwt.sign(
-            { id: newUser._id },
-            process.env.JWT_SECRET,
-            { expiresIn: "7d" }
-    );
+    const token = jwt.sign({ id: newUser._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "User registered successfully",
       token,
       user: {
@@ -35,44 +40,50 @@ const register = async(req ,res)=>{
         bio: newUser.bio,
       },
     });
-
-  }catch(err){
-    return res.status(500).json({ message: "Internal server error" });
+  } catch (err) {
+    // handle Mongo duplicate key error with a friendlier message
+    if (err.code === 11000 && err.keyValue) {
+      const field = Object.keys(err.keyValue)[0];
+      return res.status(400).json({ message: `${field} already exists` });
+    }
+    console.error("Register error:", err);
+    return res.status(500).json({ message: err.message || "Internal server error" });
   }
-}
+};
 
 
-const Login = async(req,res)=>{
-  try{
-    const {username , password} = req.body;
+const Login = async (req, res) => {
+  try {
+    const { username, password } = req.body;
 
-    const user = await User.findOne({username});
-    if(!user) return res.status(400).json({message: "Invalid username or password"});
+    if (!username || !password) {
+      return res.status(400).json({ message: "username and password are required" });
+    }
 
-    const isMatch = await bcrypt.compare(password , user.password);
-    if(!isMatch) return res.status(400).json({message: "Invalid username or password"});
+    const user = await User.findOne({ username });
+    if (!user) return res.status(400).json({ message: "Invalid username or password" });
 
-    const token = jwt.sign(
-        { id: user._id },
-         process.env.JWT_SECRET,
-         { expiresIn: "7d" }
-     );
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid username or password" });
 
-    res.status(200).json({
-        message: "Login successful",
-       token,
-       user: {
-          _id: user._id,
-          username: user.username,
-          email: user.email,
-          avatar: user.avatar,
-           bio: user.bio,
-        },
+    const token = jwt.sign({ id: user._id }, process.env.JWT_SECRET, { expiresIn: "7d" });
+
+    return res.status(200).json({
+      message: "Login successful",
+      token,
+      user: {
+        _id: user._id,
+        username: user.username,
+        email: user.email,
+        avatar: user.avatar,
+        bio: user.bio,
+      },
     });
   } catch (err) {
-    res.status(500).json({ message: err.message });
+    console.error("Login error:", err);
+    return res.status(500).json({ message: err.message || "Internal server error" });
   }
-}
+};
 
 
 
